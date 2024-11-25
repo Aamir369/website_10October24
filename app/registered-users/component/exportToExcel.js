@@ -126,13 +126,24 @@ export const exportToExcel = (data, fileName, table) => {
 };
 
 const fetchImageAsBase64 = async (url) => {
-  const response = await fetch(url);
-  const blob = await response.blob();
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result);
-    reader.readAsDataURL(blob);
-  });
+  try {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      console.error(`Failed to fetch image: ${response.statusText}`);
+      return null;
+    }
+
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error(`Error fetching image: ${error.message}`);
+    return null;
+  }
 };
 
 const preloadImages = async (signatures) => {
