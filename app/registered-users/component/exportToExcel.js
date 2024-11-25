@@ -125,7 +125,26 @@ export const exportToExcel = (data, fileName, table) => {
   XLSX.writeFile(workbook, `${fileName}.xlsx`);
 };
 
-export const exportToPDF = async (data, fileName, table) => {
+const fetchImageAsBase64 = async (url) => {
+  const response = await fetch(url);
+  const blob = await response.blob();
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.readAsDataURL(blob);
+  });
+};
+
+const preloadImages = async (signatures) => {
+  const images = await Promise.all(
+    signatures.map(async (signature) => await fetchImageAsBase64(signature))
+  );
+  return images;
+};
+
+export const exportToPDF = async (data, fileName, table, signatures) => {
+  const images = table === "flha" ? await preloadImages(signatures) : null;
+
   const headers =
     table === "flha"
       ? [
@@ -157,9 +176,6 @@ export const exportToPDF = async (data, fileName, table) => {
           "Role",
           "SiteID",
         ];
-
-  const signatureUrl =
-    "https://firebasestorage.googleapis.com/v0/b/constructiondata1-d35a0.appspot.com/o/signatures%2F1723351193972.jpg?alt=media&token=c52f5e24-f638-4ff0-9ac9-29f731ead5e0";
 
   const formattedData =
     table === "flha"
@@ -194,6 +210,7 @@ export const exportToPDF = async (data, fileName, table) => {
             `Barricades & signs in place: ${flha.data.ouHazards[0]}\nHole coverings identified: ${flha.data.ouHazards[1]}\nTrenching/underground structures: ${flha.data.ouHazards[2]}\nRig guidelines: ${flha.data.ouHazards[3]}\nPowerlines: ${flha.data.ouHazards[4]}\nFalling Items: ${flha.data.ouHazards[5]}\nHoisting or moving loads overhead: ${flha.data.ouHazards[6]}`,
             `Proper tools for the job: ${flha.data.evtHazards[0]}\nEquipment / tools inspected: ${flha.data.evtHazards[1]}\nTank plumbing: ${flha.data.evtHazards[2]}\nHoses inspected: ${flha.data.evtHazards[3]}\nHigh pressure: ${flha.data.evtHazards[4]}\nHigh temperature fluids: ${flha.data.evtHazards[5]}`,
             `Procedure not available for task: ${flha.data.plHazards[0]}\nConfusing instructions: ${flha.data.plHazards[1]}\nNo training for task or tools to be used: ${flha.data.plHazards[2]}\nFirst time performing the task: ${flha.data.plHazards[3]}\nWorking alone: ${flha.data.plHazards[4]}\nPPE inspected / used properly: ${flha.data.plHazards[5]}`,
+            null,
           ];
         })
       : data.map((user) => [
@@ -262,39 +279,26 @@ export const exportToPDF = async (data, fileName, table) => {
     },
     columnStyles: {
       0: { cellWidth: "auto" },
-      10: { cellWidth: 20, cellHeight: 20 }, // Adjust the column width for the signature
+      10: { cellWidth: 20, cellHeight: 20 },
     },
-    didDrawCell: async (data) => {
-      if (data.column.index === 13 && data.row.index >= 0) {
-        const img = new Image();
-        img.src = data?.data?.signature || signatureUrl;
-        doc.addImage(
-          img,
-          "JPEG",
-          data.cell.x,
-          data.cell.y,
-          data.column.width,
-          data.row.height
-        );
+    didDrawCell: (data) => {
+      if (
+        table === "flha" &&
+        data.column.index === headers.length - 1 &&
+        data.row.index >= 0
+      ) {
+        const imageIndex = data.row.index;
+        const imageBase64 = images[imageIndex];
+        if (imageBase64) {
+          const cellWidth = data.cell.width;
+          const cellHeight = data.cell.height;
+          const x = data.cell.x;
+          const y = data.cell.y + 12;
+          doc.addImage(imageBase64, "JPEG", x, y, cellWidth, cellHeight / 2);
+        }
       }
     },
   });
 
-  const pageCount = doc.internal.getNumberOfPages();
-  doc.setFontSize(8);
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
-    doc.text(`Page ${i} of ${pageCount}`, 148, 207, { align: "center" });
-  }
-
-  doc.save(`${fileName}.pdf`);
+  doc.save(fileName);
 };
-
-// Helper function to fetch the logo as a base64 image
-async function getBase64LogoFromFirebase() {
-  // Simulate fetching a logo
-  return new Promise((resolve) => {
-    const base64Logo = "data:image/png;base64,..."; // Replace with your base64 logo
-    resolve(base64Logo);
-  });
-}

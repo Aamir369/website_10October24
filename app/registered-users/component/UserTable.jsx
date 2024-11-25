@@ -26,114 +26,6 @@ function UserTable() {
   const [importType, setImportType] = useState("excel");
   const [startDate, setStartDate] = useState(new Date());
 
-  const testFlhaData = [
-    {
-      company_name: "Tech Builders Ltd.",
-      user_name: "Jane Doe",
-      user_email: "jane.doe@techbuilders.com",
-      data: {
-        ppe_inspected: true,
-        to_do_work: "Electrical wiring installation",
-        site_location: "Site 45A, North Industrial Area",
-        flhf: [
-          "True", // Work area clean
-          "True", // Material storage identified
-          "False", // Dust/Mist/Fumes
-          "True", // Noise in area
-          "False", // Extreme temperatures
-          "False", // Spill potential
-          "True", // Waste Properly Managed
-          "False", // Excavation Permit Required
-          "True", // Other Workers In Area
-          "Clear", // Weather Conditions
-          "True", // MSDS Reviewed
-        ],
-        ergonomics: [
-          "False", // Awkward body Position
-          "False", // Over extension
-          "False", // Prolonged twisting/bending motion
-          "True", // Working in tight area
-          "True", // Lift too heavy / awkward to lift
-          "False", // Hands not in line of sight
-          "False", // Working above your head
-        ],
-        aeHazards: [
-          "True", // Site Access/ road conditions
-          "True", // Scaffold (Inspected & Tagged)
-          "True", // Ladders (tied off)
-          "False", // Slips / Trips
-          "False", // Hoisting (tools, equipment etc)
-          "True", // Excavation (alarms, routes, ph#)
-          "False", // Confined space entry permit required
-        ],
-        ouHazards: [
-          "True", // Barricades & signs in place
-          "False", // Hole coverings identified
-          "True", // Trenching/underground structures
-          "False", // Rig guidelines
-          "True", // Powerlines
-          "False", // Falling Items
-          "True", // Hoisting or moving loads overhead
-        ],
-        evtHazards: [
-          "True", // Proper tools for the job
-          "True", // Equipment / tools inspected
-          "False", // Tank plumbing
-          "True", // Hoses inspected
-          "True", // High pressure
-          "False", // High temperature fluids
-        ],
-        plHazards: [
-          "False", // Procedure not available for task
-          "False", // Confusing instructions
-          "False", // No training for task or tools to be used
-          "True", // First time performing the task
-          "False", // Working alone
-          "True", // PPE inspected / used properly
-        ],
-        signature: "https://fakeimg.pl/300x100/", // Replace with your image URL
-      },
-      submitted_at: {
-        seconds: 1680204000, // Example timestamp
-        nanoseconds: 0,
-      },
-    },
-    // Add more objects here to simulate multiple rows in the table.
-    {
-      company_name: "BuildRight Inc.",
-      user_name: "John Smith",
-      user_email: "john.smith@buildright.com",
-      data: {
-        ppe_inspected: false,
-        to_do_work: "Concrete foundation laying",
-        site_location: "Site 23B, East End",
-        flhf: [
-          "False",
-          "True",
-          "True",
-          "False",
-          "True",
-          "True",
-          "True",
-          "False",
-          "False",
-          "Rainy",
-          "False",
-        ],
-        ergonomics: ["True", "True", "False", "False", "False", "True", "True"],
-        aeHazards: ["False", "True", "True", "True", "True", "False", "False"],
-        ouHazards: ["False", "True", "False", "True", "False", "True", "False"],
-        evtHazards: ["True", "True", "True", "False", "False", "True"],
-        plHazards: ["True", "True", "True", "False", "True", "True"],
-        signature: "https://fakeimg.pl/300x100/", // Replace with your image URL
-      },
-      submitted_at: {
-        seconds: 1680280400, // Example timestamp
-        nanoseconds: 0,
-      },
-    },
-  ];
-
   useEffect(() => {
     const fetchItems = async () => {
       try {
@@ -201,13 +93,16 @@ function UserTable() {
       });
   };
 
+  const signatures = flhaData.map((test) => test.data.signature_url);
+
   const handleExport = async () => {
     try {
       if (importType === "pdf") {
         exportToPDF(
-          buttonName === "UserTable" ? selectedData : testFlhaData,
+          buttonName === "UserTable" ? selectedData : flhaData,
           buttonName === "UserTable" ? "UserData" : "FLHAData",
-          buttonName === "FLHATable" ? "flha" : "users"
+          buttonName === "FLHATable" ? "flha" : "users",
+          signatures
         );
       } else {
         exportToExcel(
