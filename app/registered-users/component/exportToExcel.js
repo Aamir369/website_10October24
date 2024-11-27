@@ -1,6 +1,7 @@
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { getStorage, ref, getDownloadURL } from "firebase/storage";
 
 export const exportToExcel = (data, fileName, table) => {
   const headers =
@@ -125,16 +126,16 @@ export const exportToExcel = (data, fileName, table) => {
   XLSX.writeFile(workbook, `${fileName}.xlsx`);
 };
 
-const fetchImageAsBase64 = async (url) => {
+const fetchImageAsBase64 = async (firebasePath) => {
+  const storage = getStorage();
+  const storageRef = ref(storage, firebasePath);
+
   try {
+    const url = await getDownloadURL(storageRef);
+
     const response = await fetch(url);
-
-    if (!response.ok) {
-      console.error(`Failed to fetch image: ${response.statusText}`);
-      return null;
-    }
-
     const blob = await response.blob();
+
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result);
