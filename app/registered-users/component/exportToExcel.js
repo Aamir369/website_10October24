@@ -127,8 +127,7 @@ export const exportToExcel = (data, fileName, table) => {
 
 const fetchImageAsBase64 = async (url) => {
   try {
-    const proxyUrl = "https://cors-anywhere.herokuapp.com/";
-    const response = await fetch(proxyUrl + url);
+    const response = await fetch(url);
 
     if (!response.ok) {
       console.error(`Failed to fetch image: ${response.statusText}`);
@@ -155,8 +154,7 @@ const preloadImages = async (signatures) => {
 };
 
 export const exportToPDF = async (data, fileName, table, signatures) => {
-  const images =
-    table === "flha" ? await preloadImages(signatures).catch(() => null) : null;
+  const images = table === "flha" ? await preloadImages(signatures) : null;
 
   const headers =
     table === "flha"
