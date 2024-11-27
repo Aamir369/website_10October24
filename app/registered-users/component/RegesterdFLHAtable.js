@@ -1,8 +1,8 @@
-import { useAuth } from "@/components/providers/AuthProvider";
 import { db } from "@/lib/firebase/firebaseInit";
 import { collection, getDocs } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { DateTimeUtility } from "@/lib/utils/DateTimeUtility";
+import Image from "next/image";
 
 const RegesterdFLHATable = ({
   currentCompanyName,
@@ -30,18 +30,51 @@ const RegesterdFLHATable = ({
     return sortedData;
   };
 
+  const fetchImageAsBase64 = async (url) => {
+    try {
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        console.error(`Failed to fetch image: ${response.statusText}`);
+        return null;
+      }
+
+      const blob = await response.blob();
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error(`Error fetching image: ${error.message}`);
+      return null;
+    }
+  };
+
   useEffect(() => {
     const fetchItems = async () => {
       try {
         const querySnapshot = await getDocs(collection(db, "FLHA"));
         const flhaData = querySnapshot.docs.map((doc) => ({
           ...doc.data(),
-          id: doc.id, // Optionally include document ID
+          id: doc.id,
         }));
 
-        let updatedSelectedData = flhaData;
+        const updatedData = await Promise.all(
+          flhaData.map(async (item) => {
+            if (item.data.signature_url) {
+              const base64Signature = await fetchImageAsBase64(
+                item.data.signature_url
+              );
+              return { ...item, signature_base64: base64Signature };
+            }
+            return item;
+          })
+        );
+
+        let updatedSelectedData = updatedData;
         if (!admin && currentCompanyName) {
-          updatedSelectedData = flhaData.filter(
+          updatedSelectedData = updatedData.filter(
             (item) => item.company_name === currentCompanyName
           );
         }
@@ -49,7 +82,7 @@ const RegesterdFLHATable = ({
         // Sort the data
         updatedSelectedData = sortData(updatedSelectedData);
 
-        setItems(flhaData);
+        setItems(updatedData);
         setSelectedData(updatedSelectedData);
       } catch (error) {
         console.error("Error fetching user data: ", error);
@@ -119,138 +152,156 @@ const RegesterdFLHATable = ({
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Master Point Location
             </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Signature
+            </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200">
-          {selectedData.map((flha, index) => (
-            <tr
-              key={index}
-              className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
-            >
-              <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm font-medium text-gray-900">
-                  {flha.company_name}
-                </div>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm font-medium text-gray-900">
-                  {flha.user_name}
-                </div>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm font-medium text-gray-900">
-                  {flha.user_email}
-                </div>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm font-medium text-gray-900">
-                  {flha.data.ppe_inspected ? "True" : "False"}
-                </div>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm font-medium text-gray-900">
-                  {flha.data.todo}
-                </div>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm font-medium text-gray-900">
-                  {flha.data.site_location}
-                </div>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm font-medium text-gray-900">
-                  <DateTimeUtility
-                    timestamp={flha.submitted_at}
-                  ></DateTimeUtility>
-                </div>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                {flha.data.flhf.map((item, index) => (
-                  <div
-                    key={index}
-                    className="text-sm font-medium text-gray-900"
-                  >
-                    {item}
+          {selectedData.map((flha, index) => {
+            return (
+              <tr
+                key={index}
+                className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
+              >
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm font-medium text-gray-900">
+                    {flha.company_name}
                   </div>
-                ))}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                {flha.data.ergonomics.map((item, index) => (
-                  <div
-                    key={index}
-                    className="text-sm font-medium text-gray-900"
-                  >
-                    {item}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm font-medium text-gray-900">
+                    {flha.user_name}
                   </div>
-                ))}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                {flha.data.aeHazards.map((item, index) => (
-                  <div
-                    key={index}
-                    className="text-sm font-medium text-gray-900"
-                  >
-                    {item}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm font-medium text-gray-900">
+                    {flha.user_email}
                   </div>
-                ))}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                {flha.data.ouHazards.map((item, index) => (
-                  <div
-                    key={index}
-                    className="text-sm font-medium text-gray-900"
-                  >
-                    {item}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm font-medium text-gray-900">
+                    {flha.data.ppe_inspected ? "True" : "False"}
                   </div>
-                ))}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                {flha.data.evtHazards.map((item, index) => (
-                  <div
-                    key={index}
-                    className="text-sm font-medium text-gray-900"
-                  >
-                    {item}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm font-medium text-gray-900">
+                    {flha.data.todo}
                   </div>
-                ))}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                {flha.data.plHazards.map((item, index) => (
-                  <div
-                    key={index}
-                    className="text-sm font-medium text-gray-900"
-                  >
-                    {item}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm font-medium text-gray-900">
+                    {flha.data.site_location}
                   </div>
-                ))}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm font-medium text-gray-900">
-                  {flha.data.hazards_remaining ? "True" : "False"}
-                </div>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm font-medium text-gray-900">
-                  {flha.data.permits_closed_out ? "True" : "False"}
-                </div>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm font-medium text-gray-900">
-                  {flha.data.incident ? "True" : "False"}
-                </div>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm font-medium text-gray-900">
-                  {flha.data.area_cleaned_up ? "True" : "False"}
-                </div>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm font-medium text-gray-900">
-                  {flha.data.master_point_location}
-                </div>
-              </td>
-            </tr>
-          ))}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm font-medium text-gray-900">
+                    <DateTimeUtility
+                      timestamp={flha.submitted_at}
+                    ></DateTimeUtility>
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {flha.data.flhf.map((item, index) => (
+                    <div
+                      key={index}
+                      className="text-sm font-medium text-gray-900"
+                    >
+                      {item}
+                    </div>
+                  ))}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {flha.data.ergonomics.map((item, index) => (
+                    <div
+                      key={index}
+                      className="text-sm font-medium text-gray-900"
+                    >
+                      {item}
+                    </div>
+                  ))}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {flha.data.aeHazards.map((item, index) => (
+                    <div
+                      key={index}
+                      className="text-sm font-medium text-gray-900"
+                    >
+                      {item}
+                    </div>
+                  ))}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {flha.data.ouHazards.map((item, index) => (
+                    <div
+                      key={index}
+                      className="text-sm font-medium text-gray-900"
+                    >
+                      {item}
+                    </div>
+                  ))}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {flha.data.evtHazards.map((item, index) => (
+                    <div
+                      key={index}
+                      className="text-sm font-medium text-gray-900"
+                    >
+                      {item}
+                    </div>
+                  ))}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {flha.data.plHazards.map((item, index) => (
+                    <div
+                      key={index}
+                      className="text-sm font-medium text-gray-900"
+                    >
+                      {item}
+                    </div>
+                  ))}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm font-medium text-gray-900">
+                    {flha.data.hazards_remaining ? "True" : "False"}
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm font-medium text-gray-900">
+                    {flha.data.permits_closed_out ? "True" : "False"}
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm font-medium text-gray-900">
+                    {flha.data.incident ? "True" : "False"}
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm font-medium text-gray-900">
+                    {flha.data.area_cleaned_up ? "True" : "False"}
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm font-medium text-gray-900">
+                    {flha.data.master_point_location}
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {flha.signature_base64 ? (
+                    <Image
+                      src={flha.signature_base64}
+                      alt="Signature"
+                      className="w-auto"
+                      width={100}
+                      height={100}
+                    />
+                  ) : (
+                    <span className="text-sm text-gray-500">No Signature</span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
