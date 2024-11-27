@@ -311,5 +311,7 @@ export const exportToPDF = async (data, fileName, table, signatures) => {
     },
   });
 
+  console.log(signatures);
+
   doc.save(fileName);
 };
